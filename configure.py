@@ -19,7 +19,6 @@
 import os, os.path, textwrap, argparse, sys, shlex, subprocess, tempfile, re
 import distutils.dir_util
 import distutils.spawn
-import seastar_cmake
 
 configure_args = str.join(' ', [shlex.quote(x) for x in sys.argv[1:]])
 
@@ -372,64 +371,9 @@ add_tristate(arg_parser, name = 'exception-scalability-workaround', dest='except
 arg_parser.add_argument('--allocator-page-size', dest='allocator_page_size', type=int, help='override allocator page size')
 arg_parser.add_argument('--protoc-compiler', action = 'store', dest='protoc', default='protoc',
                         help = 'Path to protoc compiler, the default is protoc')
-arg_parser.add_argument('--cmake', dest='cmake', action='store_true',
-                        help='Use CMake as the underlying build-sytem')
-arg_parser.add_argument('--without-tests', dest='exclude_tests', action='store_true', help='Do not build tests by default (CMake only)')
-arg_parser.add_argument('--without-apps', dest='exclude_apps', action='store_true', help='Do not build applications by default (CMake only)')
 arg_parser.add_argument('--use-std-optional-variant-stringview', dest='cpp17_goodies', action='store', type=int, default=0,
                         help='Use C++17 std types for optional, variant, and string_view. Requires C++17 dialect and GCC >= 8.1.1-5')
 args = arg_parser.parse_args()
-
-
-if args.cpp_dialect == '':
-    cpp_dialects = ['gnu++17', 'gnu++1z', 'gnu++14', 'gnu++1y']
-    try:
-        args.cpp_dialect = [x for x in cpp_dialects if dialect_supported(x, compiler=args.cxx)][0]
-    except:
-        # if g++ is not available, fallback to something safe-ish
-        args.cpp_dialect='gnu++1y'
-
-# Forwarding to CMake.
-if args.cmake:
-    MODES = seastar_cmake.SUPPORTED_MODES if args.mode is 'all' else [args.mode]
-
-    # For convenience.
-    tr = seastar_cmake.translate_arg
-
-    def configure_mode(mode):
-        BUILD_PATH = seastar_cmake.BUILD_PATHS[mode]
-
-        TRANSLATED_ARGS = [
-            '-DCMAKE_BUILD_TYPE={}'.format(mode.title()),
-            '-DCMAKE_C_COMPILER={}'.format(args.cc),
-            '-DCMAKE_CXX_COMPILER={}'.format(args.cxx),
-            tr(args.exclude_tests, 'EXCLUDE_TESTS_BY_DEFAULT'),
-            tr(args.exclude_apps, 'EXCLUDE_APPS_BY_DEFAULT'),
-            tr(args.user_cflags, 'USER_CXXFLAGS'),
-            tr(args.user_ldflags, 'USER_LDFLAGS'),
-            tr(args.user_optflags, 'CXX_OPTIMIZATION_FLAGS'),
-            tr(args.cpp_dialect, 'CXX_DIALECT'),
-            tr(args.dpdk, 'ENABLE_DPDK'),
-            tr(args.staticboost, 'LINK_STATIC_BOOST'),
-            tr(args.staticyamlcpp, 'LINK_STATIC_YAML_CPP'),
-            tr(args.hwloc, 'ENABLE_HWLOC'),
-            tr(args.gcc6_concepts, 'ENABLE_GCC6_CONCEPTS'),
-            tr(args.alloc_failure_injector, 'ENABLE_ALLOC_FAILURE_INJECTOR'),
-            tr(args.exception_workaround, 'ENABLE_EXCEPTION_SCALABILITY_WORKAROUND'),
-            tr(args.allocator_page_size, 'ALLOCATOR_PAGE_SIZE'),
-            tr(args.cpp17_goodies, 'USE_STD_OPTIONAL_VARIANT_STRINGVIEW'),
-        ]
-
-        # Generate a new build by pointing to the source directory.
-        ARGS = seastar_cmake.CMAKE_BASIC_ARGS + [seastar_cmake.ROOT_PATH] + TRANSLATED_ARGS
-        print(ARGS)
-        distutils.dir_util.mkpath(BUILD_PATH)
-        subprocess.check_call(ARGS, shell=False, cwd=BUILD_PATH)
-
-    for mode in MODES:
-        configure_mode(mode)
-
-    sys.exit(0)
 
 libnet = [
     'net/proxy.cc',
