@@ -445,8 +445,10 @@ add_dependencies (seastar
   seastar_http_response_parser
   seastar_proto_metrics2)
 
-target_compile_features (seastar
-  PUBLIC cxx_std_17)
+if(cxx_std_17 IN_LIST CMAKE_CXX_KNOWN_FEATURES)
+  target_compile_features (seastar
+    PUBLIC cxx_std_17)
+endif()
 
 target_include_directories (seastar
   PUBLIC
@@ -473,8 +475,7 @@ target_link_libraries (seastar
     protobuf::libprotobuf
     rt::rt
     yaml-cpp::yaml-cpp
-    debug Sanitizers::address
-    debug Sanitizers::undefined_behavior)
+    debug Sanitizers::address)
 
 if (LinuxMembarrier_FOUND)
   target_compile_definitions (seastar

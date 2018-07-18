@@ -56,7 +56,7 @@ if (dl_FOUND AND NOT (TARGET dl::dl))
 
   set_target_properties (dl::dl
     PROPERTIES
-      IMPORTED_LIBNAME "${dl_LIBRARY_NAME}")
+      INTERFACE_LINK_LIBRARIES "${dl_LIBRARY_NAME}")
 endif ()
 
 mark_as_advanced (dl_LIBRARY_NAME)

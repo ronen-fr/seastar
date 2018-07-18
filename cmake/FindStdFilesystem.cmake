@@ -25,7 +25,7 @@ set (_stdfilesystem_test_source ${CMAKE_CURRENT_LIST_DIR}/code_test/StdFilesyste
 try_compile (StdFilesystem_test_stdc++fs
   ${CMAKE_CURRENT_BINARY_DIR}
   SOURCES ${_stdfilesystem_test_source}
-  CXX_STANDARD 17
+  CMAKE_FLAGS -DCMAKE_CXX_FLAGS="-std=c++17"
   LINK_LIBRARIES stdc++fs)
 
 if (StdFilesystem_test_stdc++fs)
@@ -59,7 +59,7 @@ if (StdFilesystem_FOUND AND NOT (TARGET StdFilesystem::filesystem))
 
   set_target_properties (StdFilesystem::filesystem
     PROPERTIES
-      IMPORTED_LIBNAME ${StdFilesystem_LIBRARY_NAME})
+      INTERFACE_LINK_LIBRARIES ${StdFilesystem_LIBRARY_NAME})
 endif ()
 
 mark_as_advanced (StdFilesystem_LIBRARY_NAME)

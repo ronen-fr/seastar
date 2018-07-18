@@ -53,7 +53,7 @@ if (rt_FOUND AND NOT (TARGET rt::rt))
   add_library (rt::rt INTERFACE IMPORTED)
   set_target_properties (rt::rt
     PROPERTIES
-      IMPORTED_LIBNAME "${rt_LIBRARY_NAME}")
+      INTERFACE_LINK_LIBRARIES "${rt_LIBRARY_NAME}")
 endif ()
 
 mark_as_advanced (rt_LIBRARY_NAME)

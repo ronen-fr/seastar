@@ -9,8 +9,8 @@ Description: Advanced C++ framework for high-performance server applications on 
 Version: @PROJECT_VERSION@
 
 # Platform dependencies.
-dl_libs=-l$<TARGET_PROPERTY:dl::dl,IMPORTED_LIBNAME>
-rt_libs=-l$<TARGET_PROPERTY:rt::rt,IMPORTED_LIBNAME>
+dl_libs=-l$<TARGET_PROPERTY:dl::dl,INTERFACE_LINK_LIBRARIES>
+rt_libs=-l$<TARGET_PROPERTY:rt::rt,INTERFACE_LINK_LIBRARIES>
 
 # Dependencies of dependencies.
 boost_system_libs=$<TARGET_LINKER_FILE:Boost::system>
@@ -29,7 +29,7 @@ fmt_libs=$<TARGET_LINKER_FILE:fmt::fmt>
 lksctp_tools_cflags=-I$<JOIN:$<TARGET_PROPERTY:lksctp-tools::lksctp-tools,INTERFACE_INCLUDE_DIRECTORIES>, -I>
 lksctp_tools_libs=$<TARGET_LINKER_FILE:lksctp-tools::lksctp-tools>
 sanitizers_cflags=$<JOIN:@Sanitizers_COMPILER_OPTIONS@, >
-stdfilesystem_libs=-l$<TARGET_PROPERTY:StdFilesystem::filesystem,IMPORTED_LIBNAME>
+stdfilesystem_libs=-l$<TARGET_PROPERTY:StdFilesystem::filesystem,INTERFACE_LINK_LIBRARIES>
 
 # Us.
 seastar_cflags=-I{includedir} $<JOIN:$<TARGET_PROPERTY:seastar,INTERFACE_COMPILE_OPTIONS>, > -D$<JOIN:$<TARGET_PROPERTY:seastar,INTERFACE_COMPILE_DEFINITIONS>, -D>
