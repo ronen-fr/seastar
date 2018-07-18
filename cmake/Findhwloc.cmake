@@ -23,7 +23,6 @@
 find_package (PkgConfig)
 
 pkg_search_module (PC_hwloc
-  REQUIRED
   QUIET
   hwloc)
 
