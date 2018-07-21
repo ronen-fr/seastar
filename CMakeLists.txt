@@ -77,6 +77,10 @@ option (Seastar_HWLOC
   "Enable hwloc support."
   ON)
 
+option (Seastar_NUMA
+  "Enable NUMA support."
+  ON)
+
 option (Seastar_INSTALL
   "Install targets."
   ON)
@@ -134,6 +138,7 @@ find_package (dl REQUIRED)
 find_package (hwloc 1.11.2)
 # No version information published.
 find_package (lksctp-tools REQUIRED)
+find_package (numa)
 find_package (ragel 7.0.0 REQUIRED)
 find_package (rt REQUIRED)
 find_package (yaml-cpp 0.5.1 REQUIRED)
@@ -537,13 +542,25 @@ if (Seastar_HWLOC)
 
   target_compile_definitions (seastar
     PRIVATE
-      SEASTAR_HAVE_HWLOC
-      SEASTAR_HAVE_NUMA)
+      SEASTAR_HAVE_HWLOC)
 
   target_link_libraries (seastar
     PRIVATE hwloc::hwloc)
 endif ()
 
+if (Seastar_NUMA)
+  if (NOT numa_FOUND)
+    message (FATAL_ERROR "numa support is enabled but it is not available!")
+  endif ()
+
+  target_compile_definitions (seastar
+    PRIVATE
+      SEASTAR_HAVE_NUMA)
+
+  target_link_libraries (seastar
+    PRIVATE numa::numa)
+endif ()
+  
 if (lz4_HAVE_COMPRESS_DEFAULT)
   target_compile_definitions (seastar
     PRIVATE SEASTAR_HAVE_LZ4_COMPRESS_DEFAULT)
