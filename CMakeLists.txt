@@ -142,6 +142,8 @@ find_package (numa)
 find_package (ragel 7.0.0 REQUIRED)
 find_package (rt REQUIRED)
 find_package (yaml-cpp 0.5.2 REQUIRED)
+find_package (Threads REQUIRED)
+find_package (PthreadSetName REQUIRED)
 
 #
 # Code generation helpers.
@@ -479,6 +481,7 @@ target_link_libraries (seastar
     lksctp-tools::lksctp-tools
     protobuf::libprotobuf
     rt::rt
+    Threads::Threads
     yaml-cpp::yaml-cpp
     debug Sanitizers::address)
 
