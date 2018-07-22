@@ -148,6 +148,8 @@ find_package (numactl)
 find_package (ragel 7.0.0 REQUIRED)
 find_package (rt REQUIRED)
 find_package (yaml-cpp 0.5.1 REQUIRED)
+find_package (Threads REQUIRED)
+find_package (PthreadSetName REQUIRED)
 
 #
 # Code generation helpers.
@@ -488,7 +490,8 @@ target_link_libraries (seastar
     lksctp-tools::lksctp-tools
     protobuf::libprotobuf
     rt::rt
-    yaml-cpp::yaml-cpp)
+    yaml-cpp::yaml-cpp
+    Threads::Threads)
 
 if (cxx_std_${Seastar_CXX_DIALECT} IN_LIST CMAKE_CXX_KNOWN_FEATURES)
   target_compile_features (seastar
