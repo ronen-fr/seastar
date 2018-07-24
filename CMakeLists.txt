@@ -132,7 +132,7 @@ find_package (lz4 1.7.3 REQUIRED)
 find_package (GnuTLS 3.3.26 REQUIRED)
 find_package (LinuxMembarrier)
 find_package (Protobuf 3.0.0 REQUIRED)
-find_package (Sanitizers REQUIRED)
+find_package (Sanitizers)
 find_package (StdFilesystem REQUIRED)
 find_package (dl REQUIRED)
 find_package (hwloc 1.11.2)
@@ -482,8 +482,7 @@ target_link_libraries (seastar
     protobuf::libprotobuf
     rt::rt
     Threads::Threads
-    yaml-cpp::yaml-cpp
-    debug Sanitizers::address)
+    yaml-cpp::yaml-cpp)
 
 if (LinuxMembarrier_FOUND)
   target_compile_definitions (seastar
@@ -496,6 +495,11 @@ endif ()
 if (Seastar_ALLOC_FAILURE_INJECTION)
   target_compile_definitions (seastar
     PUBLIC SEASTAR_ENABLE_ALLOC_FAILURE_INJECTION=1)
+endif ()
+
+if (Sanitizers_FOUND)
+  target_link_libraries (seastar
+    PRIVATE debug Sanitizers::address)
 endif ()
 
 if (Sanitizers_FIBER_SUPPORT)
