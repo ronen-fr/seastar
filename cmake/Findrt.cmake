@@ -40,20 +40,24 @@ if (NOT _rt_test_nil)
   endif ()
 endif ()
 
-if (_rt_test_nil OR rt_LIBRARY_NAME)
-  set (rt_FOUND ON)
+if (_rt_test_nil)
+  set (_rt_REQUIRED_VARS "_rt_test_nil")
+elseif (rt_LIBRARY_NAME)
+  set (_rt_REQUIRED_VARS "rt_LIBRARY_NAME")
 endif ()
 
 find_package_handle_standard_args (rt
   FOUND_VAR rt_FOUND
   REQUIRED_VARS
-    rt_LIBRARY_NAME)
+    ${_rt_REQUIRED_VARS})
 
 if (rt_FOUND AND NOT (TARGET rt::rt))
   add_library (rt::rt INTERFACE IMPORTED)
-  set_target_properties (rt::rt
-    PROPERTIES
-      INTERFACE_LINK_LIBRARIES "${rt_LIBRARY_NAME}")
+  if (rt_LIBRARY_NAME)
+    set_target_properties (rt::rt
+      PROPERTIES
+        INTERFACE_LINK_LIBRARIES "${rt_LIBRARY_NAME}")
+  endif ()
 endif ()
 
 mark_as_advanced (rt_LIBRARY_NAME)
