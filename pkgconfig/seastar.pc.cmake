@@ -9,7 +9,7 @@ Description: Advanced C++ framework for high-performance server applications on 
 Version: @PROJECT_VERSION@
 
 # Platform dependencies.
-dl_libs=-l$<TARGET_PROPERTY:dl::dl,INTERFACE_LINK_LIBRARIES>
+dl_libs=${CMAKE_DL_LIBS}
 rt_libs=-l$<TARGET_PROPERTY:rt::rt,INTERFACE_LINK_LIBRARIES>
 
 # Dependencies of dependencies.
