@@ -1,3 +1,5 @@
+include (CMakePushCheckState)
+
 cmake_push_check_state (RESET)
 set (CMAKE_REQUIRED_FLAGS "-pthread")
 set (CMAKE_REQUIRED_DEFINITIONS "-D_GNU_SOURCE")

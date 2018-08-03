@@ -2,13 +2,6 @@ find_library(Protobuf_LIBRARY
   NAMES protobuf)
 mark_as_advanced(Protobuf_LIBRARY)
 
-set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
-find_package(Threads)
-if(Threads_FOUND)
-  list(APPEND Protobuf_LIBRARIES ${CMAKE_THREAD_LIBS_INIT})
-  set(Protobuf_LIBRARIES "${Protobuf_LIBRARIES}" PARENT_SCOPE)
-endif()
-      
 find_path(Protobuf_INCLUDE_DIR
   google/protobuf/service.h)
 mark_as_advanced(Protobuf_INCLUDE_DIR)
