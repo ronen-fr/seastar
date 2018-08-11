@@ -488,9 +488,7 @@ target_link_libraries (seastar
     lksctp-tools::lksctp-tools
     protobuf::libprotobuf
     rt::rt
-    yaml-cpp::yaml-cpp
-    debug Sanitizers::address
-    debug Sanitizers::undefined_behavior)
+    yaml-cpp::yaml-cpp)
 
 if (cxx_std_${Seastar_CXX_DIALECT} IN_LIST CMAKE_CXX_KNOWN_FEATURES)
   target_compile_features (seastar
@@ -595,6 +593,13 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
       SEASTAR_ASAN_ENABLED
       SEASTAR_THREAD_STACK_GUARDS
     PRIVATE SEASTAR_DEFAULT_ALLOCATOR)
+  find_package (Sanitizers)
+  if (Sanitizers_FOUND)
+    target_link_libraries (seastar
+      PRIVATE
+        debug Sanitizers::address
+        debug Sanitizers::undefined_behavior)
+  endif ()
 endif ()
 
 #
