@@ -130,25 +130,24 @@ find_package (cryptopp 5.6.5 REQUIRED)
 # No version information published.
 find_package (dpdk)
 find_package (fmt 4.0.0 REQUIRED)
-find_package (lz4 1.8.0 REQUIRED)
+find_package (lz4 1.7.3 REQUIRED)
 
 ##
 ## Private and private/public dependencies.
 ##
 
-find_package (GnuTLS 3.5.18 REQUIRED)
+find_package (GnuTLS 3.3.26 REQUIRED)
 find_package (LinuxMembarrier)
-find_package (Protobuf 3.0.0 REQUIRED)
-find_package (Sanitizers REQUIRED)
+find_package (Protobuf 2.5.0 REQUIRED)
 find_package (StdFilesystem REQUIRED)
-find_package (hwloc 1.11.5)
+find_package (hwloc 1.11.2)
 # No version information published.
 find_package (lksctp-tools REQUIRED)
 # No version information published.
 find_package (numactl)
 find_package (ragel 7.0.0 REQUIRED)
 find_package (rt REQUIRED)
-find_package (yaml-cpp 0.5.3 REQUIRED)
+find_package (yaml-cpp 0.5.1 REQUIRED)
 
 #
 # Code generation helpers.
