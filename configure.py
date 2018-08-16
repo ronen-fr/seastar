@@ -243,7 +243,7 @@ modes = {
 }
 
 perf_tests = [
-    'tests/perf/perf_future_util',
+    'tests/perf/future_util_perf',
 ]
 
 tests = [
@@ -290,7 +290,7 @@ tests = [
     'tests/unit/connect_test',
     'tests/unit/chunked_fifo_test',
     'tests/unit/circular_buffer_test',
-    'tests/perf/perf_fstream',
+    'tests/perf/fstream_perf',
     'tests/unit/json_formatter_test',
     'tests/unit/dns_test',
     'tests/unit/execution_stage_test',
@@ -551,7 +551,7 @@ deps = {
     'tests/unit/connect_test': ['tests/unit/connect_test.cc'] + core + libnet,
     'tests/unit/chunked_fifo_test': ['tests/unit/chunked_fifo_test.cc'] + core,
     'tests/unit/circular_buffer_test': ['tests/unit/circular_buffer_test.cc'] + core,
-    'tests/perf/perf_fstream': ['tests/perf/perf_fstream.cc'] + core,
+    'tests/perf/fstream_perf': ['tests/perf/fstream_perf.cc'] + core,
     'tests/unit/json_formatter_test': ['tests/unit/json_formatter_test.cc'] + core + http,
     'tests/unit/dns_test': ['tests/unit/dns_test.cc'] + core + libnet,
     'tests/unit/execution_stage_test': ['tests/unit/execution_stage_test.cc'] + core,
