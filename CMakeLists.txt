@@ -570,14 +570,10 @@ set (Seastar_DEVELOPMENT_FLAGS
   -Wall
   -Werror)
 
-set (Seastar_DEVELOPMENT_LIBS
-    debug Sanitizers::address
-    debug Sanitizers::undefined_behavior)
-
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-  if (NOT Sanitizers_FOUND)
-    message (FATAL_ERROR "Sanitizers are required for debug mode!")
-  endif ()
+if (Sanitizers_FOUND)
+  set (Seastar_DEVELOPMENT_LIBS
+      debug Sanitizers::address
+      debug Sanitizers::undefined_behavior)
 endif ()
 
 target_link_libraries (seastar
