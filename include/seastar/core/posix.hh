@@ -248,6 +248,10 @@ public:
         auto r = ::bind(_fd, &sa, sl);
         throw_system_error_on(r == -1, "bind");
     }
+    void unixdomain_bind(sockaddr_un sa) {
+        auto r = ::bind(_fd, (struct sockaddr *)&sa, sizeof(sockaddr_un));
+        throw_system_error_on(r == -1, "bind");
+    }
     void connect(sockaddr& sa, socklen_t sl) {
         auto r = ::connect(_fd, &sa, sl);
         if (r == -1 && errno == EINPROGRESS) {

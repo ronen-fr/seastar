@@ -75,7 +75,7 @@ size_t message_queue::process_queue(lf_queue& q, Func process) {
         ++nr;
     }
     std::fill(std::begin(items) + nr, std::begin(items) + nr + prefetch_cnt, nr ? items[nr - 1] : wi);
-    unsigned i = 0;
+    size_t i = 0;
     do {
         prefetch_n<2>(std::begin(items) + i, std::begin(items) + i + prefetch_cnt);
         process(wi);

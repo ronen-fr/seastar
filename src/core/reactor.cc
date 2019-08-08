@@ -1775,21 +1775,35 @@ void reactor_backend_epoll::forget(pollable_fd_state& fd) {
 
 pollable_fd
 reactor::posix_listen(socket_address sa, listen_options opts) {
-    file_desc fd = file_desc::socket(sa.u.sa.sa_family, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, int(opts.proto));
-    if (opts.reuse_address) {
-        fd.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1);
-    }
-    if (_reuseport)
-        fd.setsockopt(SOL_SOCKET, SO_REUSEPORT, 1);
+    if (opts.proto == transport::UNIX) {
 
-    try {
-        fd.bind(sa.u.sa, sizeof(sa.u.sas));
-        fd.listen(100);
-    } catch (const std::system_error& s) {
-        throw std::system_error(s.code(), fmt::format("posix_listen failed for address {}", sa));
-    }
+        file_desc fd = file_desc::socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0);
+        try {
+            fd.unixdomain_bind(sa.as_posix_sockaddr_unix());
+            fd.listen(100);
+        } catch (const std::system_error& s) {
+            throw std::system_error(s.code(), fmt::format("posix_listen failed for unix-domain path {}", sa.as_posix_sockaddr_unix().sun_path));
+        }
 
-    return pollable_fd(std::move(fd));
+        return pollable_fd(std::move(fd));
+
+    } else {
+        file_desc fd = file_desc::socket(sa.u.sa.sa_family, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, int(opts.proto));
+        if (opts.reuse_address) {
+            fd.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1);
+        }
+        if (_reuseport)
+            fd.setsockopt(SOL_SOCKET, SO_REUSEPORT, 1);
+
+        try {
+            fd.bind(sa.u.sa, sizeof(sa.u.sas));
+            fd.listen(100);
+        } catch (const std::system_error& s) {
+            throw std::system_error(s.code(), fmt::format("posix_listen failed for address {}", sa));
+        }
+
+        return pollable_fd(std::move(fd));
+    }
 }
 
 bool

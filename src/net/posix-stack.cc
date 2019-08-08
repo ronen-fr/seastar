@@ -104,6 +104,32 @@ public:
     }
 };
 
+template <>
+class posix_connected_socket_operations<transport::UNIX> {
+public:
+    void set_nodelay(file_desc& _fd, bool nodelay) {
+        // meaningless for Unix-domain. No Nagle's algorithm...
+    }
+    bool get_nodelay(file_desc& _fd) const {
+        return true;
+    }
+    void set_keepalive(file_desc& _fd, bool keepalive) {
+        // meaningless for Unix-domain
+    }
+    bool get_keepalive(file_desc& _fd) const {
+        return true; //_fd.getsockopt<int>(SOL_SOCKET, SO_KEEPALIVE);
+    }
+    void set_keepalive_parameters(file_desc& _fd, const keepalive_params& params) {
+    }
+    keepalive_params get_keepalive_parameters(file_desc& _fd) const {
+        return tcp_keepalive_params {
+            std::chrono::seconds(1),
+            std::chrono::seconds(1),
+            0
+        };
+    }
+};
+
 template <transport Transport>
 class posix_connected_socket_impl final : public connected_socket_impl, posix_connected_socket_operations<Transport> {
     lw_shared_ptr<pollable_fd> _fd;
@@ -153,8 +179,10 @@ public:
     friend class posix_ap_network_stack;
     friend class posix_socket_impl;
 };
+
 using posix_connected_tcp_socket_impl = posix_connected_socket_impl<transport::TCP>;
 using posix_connected_sctp_socket_impl = posix_connected_socket_impl<transport::SCTP>;
+using posix_connected_unix_socket_impl = posix_connected_socket_impl<transport::UNIX>;
 
 class posix_socket_impl final : public socket_impl {
     lw_shared_ptr<pollable_fd> _fd;
@@ -165,6 +193,9 @@ class posix_socket_impl final : public socket_impl {
         static thread_local std::uniform_int_distribution<uint16_t> u(49152/smp::count + 1, 65535/smp::count - 1);
         return repeat([this, sa, local, proto, attempts = 0, requested_port = ntoh(local.as_posix_sockaddr_in().sin_port)] () mutable {
             uint16_t port = attempts++ < 5 && requested_port == 0 && proto == transport::TCP ? u(random_engine) * smp::count + engine().cpu_id() : requested_port;
+            if (proto == transport::UNIX)
+                return make_exception_future<bool_class<stop_iteration_tag>>(std::system_error(ESOCKTNOSUPPORT, std::system_category()));
+                
             local.as_posix_sockaddr_in().sin_port = hton(port);
             return futurize_apply([this, sa, local] { return engine().posix_connect(_fd, sa, local); }).then_wrapped([] (future<> f) {
                 try {
@@ -187,10 +218,17 @@ public:
         _fd = engine().make_pollable_fd(sa, proto);
         return find_port_and_connect(sa, local, proto).then([fd = _fd, proto, allocator = _allocator] () mutable {
             std::unique_ptr<connected_socket_impl> csi;
-            if (proto == transport::TCP) {
+            switch (proto) {
+            case transport::TCP:
                 csi.reset(new posix_connected_tcp_socket_impl(std::move(fd), allocator));
-            } else {
+                break;
+            case transport::SCTP:
                 csi.reset(new posix_connected_sctp_socket_impl(std::move(fd), allocator));
+                break;
+            case transport::UNIX:
+                // no support yet for unix-domain client side
+                return make_exception_future<connected_socket>(std::system_error(ESOCKTNOSUPPORT, std::system_category()));
+                ;
             }
             return make_ready_future<connected_socket>(connected_socket(std::move(csi)));
         });
@@ -367,16 +405,22 @@ posix_data_sink_impl::close() {
 
 server_socket
 posix_network_stack::listen(socket_address sa, listen_options opt) {
-    if (opt.proto == transport::TCP) {
+    switch (opt.proto) {
+    case transport::TCP:
+    default:
         return _reuseport ?
             server_socket(std::make_unique<posix_reuseport_server_tcp_socket_impl>(sa, engine().posix_listen(sa, opt), _allocator))
             :
             server_socket(std::make_unique<posix_server_tcp_socket_impl>(sa, engine().posix_listen(sa, opt), opt.lba, _allocator));
-    } else {
+    case transport::SCTP:
         return _reuseport ?
             server_socket(std::make_unique<posix_reuseport_server_sctp_socket_impl>(sa, engine().posix_listen(sa, opt), _allocator))
             :
             server_socket(std::make_unique<posix_server_sctp_socket_impl>(sa, engine().posix_listen(sa, opt), opt.lba, _allocator));
+    case transport::UNIX: {
+            auto server_imp = std::make_unique<posix_server_unix_socket_impl>(sa, engine().posix_listen(sa, opt), opt.lba, _allocator);
+            return server_socket(std::move(server_imp));
+        } 
     }
 }
 
@@ -391,16 +435,23 @@ thread_local std::unordered_multimap<socket_address, typename posix_ap_server_so
 
 server_socket
 posix_ap_network_stack::listen(socket_address sa, listen_options opt) {
-    if (opt.proto == transport::TCP) {
-        return _reuseport ?
-            server_socket(std::make_unique<posix_reuseport_server_tcp_socket_impl>(sa, engine().posix_listen(sa, opt)))
-            :
-            server_socket(std::make_unique<posix_tcp_ap_server_socket_impl>(sa));
-    } else {
-        return _reuseport ?
-            server_socket(std::make_unique<posix_reuseport_server_sctp_socket_impl>(sa, engine().posix_listen(sa, opt)))
-            :
-            server_socket(std::make_unique<posix_sctp_ap_server_socket_impl>(sa));
+    switch (opt.proto) {
+
+        case transport::TCP:
+        default:
+            return _reuseport ?
+                server_socket(std::make_unique<posix_reuseport_server_tcp_socket_impl>(sa, engine().posix_listen(sa, opt)))
+                :
+                server_socket(std::make_unique<posix_tcp_ap_server_socket_impl>(sa));
+
+        case transport::SCTP:
+            return _reuseport ?
+                server_socket(std::make_unique<posix_reuseport_server_sctp_socket_impl>(sa, engine().posix_listen(sa, opt)))
+                :
+                server_socket(std::make_unique<posix_sctp_ap_server_socket_impl>(sa));
+
+        case transport::UNIX:
+            return server_socket(std::make_unique<posix_server_unix_socket_impl>(sa, engine().posix_listen(sa, opt), opt.lba));
     }
 }
 

@@ -149,6 +149,7 @@ public:
 };
 using posix_tcp_ap_server_socket_impl = posix_ap_server_socket_impl<transport::TCP>;
 using posix_sctp_ap_server_socket_impl = posix_ap_server_socket_impl<transport::SCTP>;
+using posix_unix_ap_server_socket_impl = posix_ap_server_socket_impl<transport::UNIX>;
 
 template <transport Transport>
 class posix_server_socket_impl : public server_socket_impl {
@@ -166,6 +167,7 @@ public:
 };
 using posix_server_tcp_socket_impl = posix_server_socket_impl<transport::TCP>;
 using posix_server_sctp_socket_impl = posix_server_socket_impl<transport::SCTP>;
+using posix_server_unix_socket_impl = posix_server_socket_impl<transport::UNIX>;
 
 template <transport Transport>
 class posix_reuseport_server_socket_impl : public server_socket_impl {

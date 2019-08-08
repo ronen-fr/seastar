@@ -23,8 +23,11 @@
 #include <iosfwd>
 #include <array>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <netinet/ip.h>
 #include <seastar/net/byteorder.hh>
+#include <filesystem>
+#include <string_view>
 
 namespace seastar {
 
@@ -34,6 +37,7 @@ class inet_address;
 
 struct ipv4_addr;
 struct ipv6_addr;
+struct ud_addr;     // unix-domain socket address
 
 class socket_address {
 public:
@@ -42,6 +46,7 @@ public:
         ::sockaddr sa;
         ::sockaddr_in in;
         ::sockaddr_in6 in6;
+        ::sockaddr_un un;
     } u;
     socket_address(const sockaddr_in& sa) {
         u.in = sa;
@@ -53,13 +58,17 @@ public:
     socket_address(ipv4_addr);
     socket_address(const ipv6_addr&);
     socket_address(const net::inet_address&, uint16_t p = 0);
+    socket_address(const std::filesystem::path);
+    socket_address(const ud_addr&);
     socket_address();
     ::sockaddr& as_posix_sockaddr() { return u.sa; }
+    ::sockaddr_un& as_posix_sockaddr_unix() { return u.un; }
     ::sockaddr_in& as_posix_sockaddr_in() { return u.in; }
     ::sockaddr_in6& as_posix_sockaddr_in6() { return u.in6; }
     const ::sockaddr& as_posix_sockaddr() const { return u.sa; }
     const ::sockaddr_in& as_posix_sockaddr_in() const { return u.in; }
     const ::sockaddr_in6& as_posix_sockaddr_in6() const { return u.in6; }
+    const ::sockaddr_un& as_posix_sockaddr_unix() const { return u.un; }
 
     socket_address(uint32_t, uint16_t p = 0);
 
@@ -77,7 +86,8 @@ std::ostream& operator<<(std::ostream&, const socket_address&);
 
 enum class transport {
     TCP = IPPROTO_TCP,
-    SCTP = IPPROTO_SCTP
+    SCTP = IPPROTO_SCTP,
+    UNIX 
 };
 
 
@@ -123,6 +133,14 @@ struct ipv6_addr {
     }
 };
 
+struct ud_addr {
+    std::filesystem::path sfile_;
+
+    explicit ud_addr(const std::string&);
+    explicit ud_addr(std::string_view fn) { sfile_ = fn; }
+    explicit ud_addr(const std::filesystem::path& fn) { sfile_ = fn; }
+};
+
 std::ostream& operator<<(std::ostream&, const ipv4_addr&);
 std::ostream& operator<<(std::ostream&, const ipv6_addr&);
 
@@ -140,6 +158,10 @@ struct hash<seastar::socket_address> {
 template<>
 struct hash<seastar::ipv4_addr> {
     size_t operator()(const seastar::ipv4_addr&) const;
+};
+template<>
+struct hash<seastar::ud_addr> {
+    size_t operator()(const seastar::ud_addr&) const;
 };
 
 }
