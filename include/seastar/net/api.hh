@@ -56,6 +56,11 @@ socket_address make_ipv4_address(uint32_t ip, uint16_t port) {
     return make_ipv4_address(ipv4_addr(ip, port));
 }
 
+inline
+socket_address make_unix_address(const unix_domain_addr& path) {
+    return socket_address{path};
+}
+
 namespace net {
 
 // see linux tcp(7) for parameter explanation

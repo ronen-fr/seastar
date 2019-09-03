@@ -479,6 +479,7 @@ add_library (seastar STATIC
   include/seastar/net/dpdk.hh
   include/seastar/net/ethernet.hh
   include/seastar/net/inet_address.hh
+  include/seastar/net/unix_address.hh  
   include/seastar/net/ip.hh
   include/seastar/net/ip_checksum.hh
   include/seastar/net/native-stack.hh
@@ -569,6 +570,7 @@ add_library (seastar STATIC
   src/net/dpdk.cc
   src/net/ethernet.cc
   src/net/inet_address.cc
+  src/net/unix_address.cc
   src/net/ip.cc
   src/net/ip_checksum.cc
   src/net/native-stack-impl.hh

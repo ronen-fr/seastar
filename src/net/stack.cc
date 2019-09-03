@@ -285,6 +285,8 @@ bool socket_address::operator==(const socket_address& a) const {
     if (u.sa.sa_family != a.u.sa.sa_family) {
         return false;
     }
+    if (u.sa.sa_family == AF_UNIX)
+        return (u.ud == a.u.ud);
     if (u.in.sin_port != a.u.in.sin_port) {
         return false;
     }

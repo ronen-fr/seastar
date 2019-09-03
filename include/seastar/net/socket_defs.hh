@@ -23,8 +23,10 @@
 #include <iosfwd>
 #include <array>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <netinet/ip.h>
 #include <seastar/net/byteorder.hh>
+#include <seastar/net/unix_address.hh>
 
 namespace seastar {
 
@@ -42,6 +44,7 @@ public:
         ::sockaddr sa;
         ::sockaddr_in in;
         ::sockaddr_in6 in6;
+        unix_domain_addr ud;
     } u;
     socket_address(const sockaddr_in& sa) {
         u.in = sa;
@@ -53,6 +56,7 @@ public:
     socket_address(ipv4_addr);
     socket_address(const ipv6_addr&);
     socket_address(const net::inet_address&, uint16_t p = 0);
+    explicit socket_address(const unix_domain_addr&);
     socket_address();
     ::sockaddr& as_posix_sockaddr() { return u.sa; }
     ::sockaddr_in& as_posix_sockaddr_in() { return u.in; }
@@ -60,8 +64,25 @@ public:
     const ::sockaddr& as_posix_sockaddr() const { return u.sa; }
     const ::sockaddr_in& as_posix_sockaddr_in() const { return u.in; }
     const ::sockaddr_in6& as_posix_sockaddr_in6() const { return u.in6; }
+    const unix_domain_addr& as_unix_domain_addr() const  { return u.ud; }
 
     socket_address(uint32_t, uint16_t p = 0);
+
+    socklen_t length() const {
+        switch (u.sa.sa_family) {
+        case AF_INET:
+        default:
+            return sizeof(::sockaddr_in);
+        case AF_INET6:
+            return sizeof(::sockaddr_in6);
+        case AF_UNIX:
+            return u.ud.path_byte_count+((size_t) (((struct sockaddr_un *) 0)->sun_path));
+        }
+    }
+
+    bool is_af_unix() const {
+        return u.sa.sa_family == AF_UNIX;
+    }
 
     net::inet_address addr() const;
     ::in_port_t port() const;
@@ -79,7 +100,6 @@ enum class transport {
     TCP = IPPROTO_TCP,
     SCTP = IPPROTO_SCTP
 };
-
 
 struct ipv4_addr {
     uint32_t ip;
@@ -125,6 +145,7 @@ struct ipv6_addr {
 
 std::ostream& operator<<(std::ostream&, const ipv4_addr&);
 std::ostream& operator<<(std::ostream&, const ipv6_addr&);
+std::ostream& operator<<(std::ostream&, const unix_domain_addr&);
 
 inline bool operator==(const ipv4_addr &lhs, const ipv4_addr& rhs) {
     return lhs.ip == rhs.ip && lhs.port == rhs.port;
@@ -140,6 +161,10 @@ struct hash<seastar::socket_address> {
 template<>
 struct hash<seastar::ipv4_addr> {
     size_t operator()(const seastar::ipv4_addr&) const;
+};
+template<>
+struct hash<seastar::unix_domain_addr> {
+    size_t operator()(const seastar::unix_domain_addr&) const;
 };
 
 }

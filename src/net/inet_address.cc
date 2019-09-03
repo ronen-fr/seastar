@@ -293,6 +293,10 @@ std::ostream& seastar::net::operator<<(std::ostream& os, const inet_address::fam
 }
 
 std::ostream& seastar::operator<<(std::ostream& os, const socket_address& a) {
+    if (a.is_af_unix()) {
+        return (os << a.u.ud);
+    }
+
     auto addr = a.addr();
     // CMH. maybe skip brackets for ipv4-mapped
     auto bracket = addr.in_family() == seastar::net::inet_address::family::INET6;

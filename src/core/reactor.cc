@@ -216,8 +216,9 @@ future<std::tuple<pollable_fd, socket_address>>
 reactor::accept(pollable_fd_state& listenfd) {
     return readable_or_writeable(listenfd).then([this, &listenfd] () mutable {
         socket_address sa;
-        socklen_t sl = sizeof(sa.u.sas);
-        auto maybe_fd = listenfd.fd.try_accept(sa.u.sa, sl, SOCK_NONBLOCK | SOCK_CLOEXEC);
+        socklen_t sl = sizeof(sa);
+        // note: must pass a 'socket_address' to select the correct 'accept()'
+        auto maybe_fd = listenfd.fd.try_accept(sa, sl, SOCK_NONBLOCK | SOCK_CLOEXEC);
         if (!maybe_fd) {
             // We speculated that we will have an another connection, but got a false
             // positive. Try again without speculation.
@@ -1904,6 +1905,13 @@ void reactor_backend_epoll::forget(pollable_fd_state& fd) {
 
 pollable_fd
 reactor::posix_listen(socket_address sa, listen_options opts) {
+    auto specific_protocol = (int)(opts.proto);
+    auto socket_flags = SOCK_STREAM | SOCK_CLOEXEC | SOCK_NONBLOCK;
+    if (sa.is_af_unix()) {
+        specific_protocol = 0;
+        opts.reuse_address = 0;
+    }
+
     static auto somaxconn = [] {
         compat::optional<int> result;
         std::ifstream ifs("/proc/sys/net/core/somaxconn");
@@ -1921,15 +1929,15 @@ reactor::posix_listen(socket_address sa, listen_options opts) {
             *somaxconn, opts.listen_backlog, opts.listen_backlog);
     }
 
-    file_desc fd = file_desc::socket(sa.u.sa.sa_family, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, int(opts.proto));
+    file_desc fd = file_desc::socket(sa.u.sa.sa_family, socket_flags, specific_protocol);
     if (opts.reuse_address) {
         fd.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1);
     }
-    if (_reuseport)
+    if (_reuseport && !sa.is_af_unix())
         fd.setsockopt(SOL_SOCKET, SO_REUSEPORT, 1);
 
     try {
-        fd.bind(sa.u.sa, sizeof(sa.u.sas));
+        fd.bind(sa.u.sa, sa.length());
         fd.listen(opts.listen_backlog);
     } catch (const std::system_error& s) {
         throw std::system_error(s.code(), fmt::format("posix_listen failed for address {}", sa));

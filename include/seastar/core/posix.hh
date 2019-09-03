@@ -132,6 +132,15 @@ public:
         throw_system_error_on(ret == -1, "accept4");
         return file_desc(ret);
     }
+    file_desc accept(socket_address& sa, socklen_t& sl, int flags = 0) {
+        auto ret = ::accept4(_fd, &sa.as_posix_sockaddr(), &sl, flags);
+        throw_system_error_on(ret == -1, "accept4");
+        if (sa.u.sa.sa_family == AF_UNIX) {
+            // do not lose the length data for abstract/no-name namespaces
+            sa.u.ud.path_byte_count = std::max(0, (int)sl-2);
+        }
+        return file_desc(ret);
+    }
     // return nullopt if no connection is availbale to be accepted
     compat::optional<file_desc> try_accept(sockaddr& sa, socklen_t& sl, int flags = 0) {
         auto ret = ::accept4(_fd, &sa, &sl, flags);
@@ -139,6 +148,18 @@ public:
             return {};
         }
         throw_system_error_on(ret == -1, "accept4");
+        return file_desc(ret);
+    }
+    compat::optional<file_desc> try_accept(socket_address& sa, socklen_t& sl, int flags = 0) {
+        auto ret = ::accept4(_fd, &sa.as_posix_sockaddr(), &sl, flags);
+        if (ret == -1 && errno == EAGAIN) {
+            return {};
+        }
+        throw_system_error_on(ret == -1, "accept4");
+        if (sa.u.sa.sa_family == AF_UNIX) {
+            // do not lose the length data for abstract/no-name namespaces
+            sa.u.ud.path_byte_count = std::max(0, (int)sl-2);
+        }
         return file_desc(ret);
     }
     void shutdown(int how) {
@@ -240,7 +261,7 @@ public:
         return { size_t(r) };
     }
     boost::optional<size_t> sendto(socket_address& addr, const void* buf, size_t len, int flags) {
-        auto r = ::sendto(_fd, buf, len, flags, &addr.u.sa, sizeof(addr.u.sas));
+        auto r = ::sendto(_fd, buf, len, flags, &addr.u.sa, addr.length());
         if (r == -1 && errno == EAGAIN) {
             return {};
         }
