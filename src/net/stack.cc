@@ -190,7 +190,7 @@ socket_address::socket_address(const ipv6_addr& addr)
     std::copy(addr.ip.begin(), addr.ip.end(), u.in6.sin6_addr.s6_addr);
 }
 
-socket_address::socket_address(const ud_addr& addr)
+socket_address::socket_address(const unix_domain_addr& addr)
 {
     u.un.sun_family = AF_UNIX;
     
@@ -200,7 +200,7 @@ socket_address::socket_address(const ud_addr& addr)
     strncpy(u.un.sun_path, addr.sfile_.c_str(), sizeof(u.un.sun_path)-1);
     u.un.sun_path[sizeof(u.un.sun_path)-1] = '\0';
 }
-    
+
 socket_address::socket_address(uint32_t ipv4, uint16_t p)
     : socket_address(make_ipv4_address(ipv4, p))
 {}
@@ -208,6 +208,10 @@ socket_address::socket_address(uint32_t ipv4, uint16_t p)
 bool socket_address::operator==(const socket_address& a) const {
     if (u.sa.sa_family != a.u.sa.sa_family) {
         return false;
+    }
+    if (u.sa.sa_family == AF_UNIX) {
+        // no support yet for abstract-namespace u.d. sockets
+        return !strcmp(u.un.sun_path, a.u.un.sun_path);
     }
     if (u.in.sin_port != a.u.in.sin_port) {
         return false;
