@@ -27,6 +27,7 @@
 #include <netinet/ip.h>
 #include <seastar/net/byteorder.hh>
 #include <seastar/net/unix_address.hh>
+#include <cassert>
 
 namespace seastar {
 
@@ -39,17 +40,19 @@ struct ipv6_addr;
 
 class socket_address {
 public:
+    socklen_t addr_length; ///!< actual size of the relevant 'u' member
     union {
         ::sockaddr_storage sas;
         ::sockaddr sa;
         ::sockaddr_in in;
         ::sockaddr_in6 in6;
-        unix_domain_addr ud;
+        ::sockaddr_un un;
+        //unix_domain_addr ud;
     } u;
-    socket_address(const sockaddr_in& sa) {
+    socket_address(const sockaddr_in& sa) : addr_length{sizeof(::sockaddr_in)} {
         u.in = sa;
     }
-    socket_address(const sockaddr_in6& sa) {
+    socket_address(const sockaddr_in6& sa) : addr_length{sizeof(::sockaddr_in6)} {
         u.in6 = sa;
     }
     socket_address(uint16_t);
@@ -64,24 +67,17 @@ public:
     const ::sockaddr& as_posix_sockaddr() const { return u.sa; }
     const ::sockaddr_in& as_posix_sockaddr_in() const { return u.in; }
     const ::sockaddr_in6& as_posix_sockaddr_in6() const { return u.in6; }
-    const unix_domain_addr& as_unix_domain_addr() const  { return u.ud; }
 
     socket_address(uint32_t, uint16_t p = 0);
 
-    socklen_t length() const {
-        switch (u.sa.sa_family) {
-        case AF_INET:
-        default:
-            return sizeof(::sockaddr_in);
-        case AF_INET6:
-            return sizeof(::sockaddr_in6);
-        case AF_UNIX:
-            return u.ud.path_byte_count+((size_t) (((struct sockaddr_un *) 0)->sun_path));
-        }
-    }
+    socklen_t length() const { return addr_length; };
 
     bool is_af_unix() const {
         return u.sa.sa_family == AF_UNIX;
+    }
+
+    sa_family_t family() const {
+        return u.sa.sa_family;
     }
 
     net::inet_address addr() const;
@@ -95,6 +91,9 @@ public:
 };
 
 std::ostream& operator<<(std::ostream&, const socket_address&);
+
+///  \brief create a string w a printable translation of a UNIX-domain address
+std::string printable_ud_addr(const socket_address&);
 
 enum class transport {
     TCP = IPPROTO_TCP,
@@ -165,6 +164,10 @@ struct hash<seastar::ipv4_addr> {
 template<>
 struct hash<seastar::unix_domain_addr> {
     size_t operator()(const seastar::unix_domain_addr&) const;
+};
+template<>
+struct hash<::sockaddr_un> {
+    size_t operator()(const ::sockaddr_un&) const;
 };
 
 }

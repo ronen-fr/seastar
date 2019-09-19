@@ -26,6 +26,7 @@
 #include <functional>
 #include <seastar/net/socket_defs.hh>
 #include <cstring>
+#include <cassert>
 
 namespace seastar {
 
@@ -37,15 +38,16 @@ unix_domain_addr::unix_domain_addr(const std::string& fn) : local_family{AF_UNIX
 
 unix_domain_addr::unix_domain_addr(const char* fn) : local_family{AF_UNIX} {
     memset(local_path, '\0', sizeof(local_path));
-    path_byte_count = std::min(strlen(fn), sizeof(local_path)-1);
+    path_byte_count = std::min(1+strlen(fn), sizeof(local_path)-1);
     memcpy(local_path, fn, path_byte_count);
 }
 
 socket_address::socket_address(const unix_domain_addr& s) {
-    u.ud.local_family = AF_UNIX;
-    memset(u.ud.local_path, '\0', sizeof(u.ud.local_path));
-    u.ud.path_byte_count = s.path_byte_count;
-    memcpy(u.ud.local_path, s.local_path, sizeof(u.ud.local_path));
+    u.un.sun_family = AF_UNIX;
+    memset(u.un.sun_path, '\0', sizeof(u.un.sun_path));
+    auto path_length = std::min(sizeof(u.un.sun_path), s.path_byte_count);
+    addr_length = path_length + ((size_t) (((struct sockaddr_un *) 0)->sun_path));
+    memcpy(u.un.sun_path, s.local_path, path_length);
 }    
 
 std::ostream& operator<<(std::ostream& os, const unix_domain_addr& addr) {
@@ -64,6 +66,30 @@ std::ostream& operator<<(std::ostream& os, const unix_domain_addr& addr) {
     for (; --k > 0; src++)
         os << (std::isprint(*src) ? *src : '_');
     return os;
+}
+
+std::string printable_ud_addr(const socket_address& sa) {
+    using namespace std::string_literals;
+    assert(sa.u.un.sun_family == AF_UNIX);
+
+    if (sa.length() <= 2) {
+        return "{unnamed}"s;
+    }
+    if (sa.u.un.sun_path[0]) {
+        // regular (filesystem-namespace) path
+        return std::string{sa.u.un.sun_path};
+    }
+
+    const size_t  path_length{sa.length() - 2};
+    char ud_path[path_length];
+    char* targ = ud_path;
+    *targ++ = '@';
+    const char* src = sa.u.un.sun_path+1;
+    int k = (int)path_length;
+
+    for (; --k > 0; src++)
+        *targ++ = std::isprint(*src) ? *src : '_';
+    return std::string{ud_path, path_length};
 }
 
 } // namespace seastar

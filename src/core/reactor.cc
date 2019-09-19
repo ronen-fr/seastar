@@ -216,7 +216,7 @@ future<std::tuple<pollable_fd, socket_address>>
 reactor::accept(pollable_fd_state& listenfd) {
     return readable_or_writeable(listenfd).then([this, &listenfd] () mutable {
         socket_address sa;
-        socklen_t sl = sizeof(sa);
+        socklen_t sl = sa.length();
         // note: must pass a 'socket_address' to select the correct 'accept()'
         auto maybe_fd = listenfd.fd.try_accept(sa, sl, SOCK_NONBLOCK | SOCK_CLOEXEC);
         if (!maybe_fd) {
@@ -1977,26 +1977,34 @@ reactor::make_pollable_fd(socket_address sa, transport proto) {
     return make_lw_shared<pollable_fd>(pollable_fd(std::move(fd)));
 }
 
+lw_shared_ptr<pollable_fd>
+reactor::make_non_inet_pollable_fd(socket_address sa) {
+    file_desc fd = file_desc::socket(sa.u.sa.sa_family, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0);
+    return make_lw_shared<pollable_fd>(pollable_fd(std::move(fd)));
+}
+
 future<>
 reactor::posix_connect(lw_shared_ptr<pollable_fd> pfd, socket_address sa, socket_address local) {
 #ifdef IP_BIND_ADDRESS_NO_PORT
-    try {
-        // do not reserve an ephemeral port when using bind() with port number 0.
-        // connect() will handle it later. The reason for that is that bind() may fail
-        // to allocate a port while connect will success, this is because bind() does not
-        // know dst address and has to find globally unique local port.
-        pfd->get_file_desc().setsockopt(SOL_IP, IP_BIND_ADDRESS_NO_PORT, 1);
-    } catch (std::system_error& err) {
-        if (err.code() !=  std::error_code(ENOPROTOOPT, std::system_category())) {
-            throw;
+    if (!sa.is_af_unix()) {
+        try {
+            // do not reserve an ephemeral port when using bind() with port number 0.
+            // connect() will handle it later. The reason for that is that bind() may fail
+            // to allocate a port while connect will success, this is because bind() does not
+            // know dst address and has to find globally unique local port.
+            pfd->get_file_desc().setsockopt(SOL_IP, IP_BIND_ADDRESS_NO_PORT, 1);
+        } catch (std::system_error& err) {
+            if (err.code() !=  std::error_code(ENOPROTOOPT, std::system_category())) {
+                throw;
+            }
         }
     }
 #endif
     if (!local.is_wildcard()) {
         // call bind() only if local address is not wildcard
-        pfd->get_file_desc().bind(local.u.sa, sizeof(sa.u.sas));
+        pfd->get_file_desc().bind(local.u.sa, local.length());
     }
-    pfd->get_file_desc().connect(sa.u.sa, sizeof(sa.u.sas));
+    pfd->get_file_desc().connect(sa.u.sa, sa.length());
     return pfd->writeable().then([pfd]() mutable {
         auto err = pfd->get_file_desc().getsockopt<int>(SOL_SOCKET, SO_ERROR);
         if (err != 0) {

@@ -306,6 +306,9 @@ seastar_add_test (httpd
 seastar_add_test (ipv6
   SOURCES ipv6_test.cc)
 
+seastar_add_test (unixdomain
+  SOURCES unix_domain_test.cc)
+
 seastar_add_test (json_formatter
   SOURCES json_formatter_test.cc)
 

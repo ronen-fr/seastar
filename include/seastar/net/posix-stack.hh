@@ -162,8 +162,8 @@ class posix_ap_server_unix_socket_impl : public api_v2::server_socket_impl {
         conntrack::handle connection_tracking_handle;
         connection(pollable_fd xfd, socket_address xaddr, conntrack::handle cth) : fd(std::move(xfd)), addr(xaddr), connection_tracking_handle(std::move(cth)) {}
     };
-    static thread_local std::unordered_map<unix_domain_addr, promise<accept_result>> sockets_;
-    static thread_local std::unordered_multimap<unix_domain_addr, connection> conn_q_;
+    static thread_local std::unordered_map<socket_address, promise<accept_result>> sockets_;
+    static thread_local std::unordered_multimap<socket_address, connection> conn_q_;
     socket_address _sa;
     compat::polymorphic_allocator<char>* _allocator;
 public:
@@ -173,7 +173,7 @@ public:
     socket_address local_address() const override {
         return _sa;
     }
-    const unix_domain_addr& local_sa() const { return _sa.as_unix_domain_addr(); }
+    //const unix_domain_addr& local_sa() const { return _sa.as_unix_domain_addr(); }
     static void move_connected_unix_socket(socket_address sa, pollable_fd fd, socket_address addr, conntrack::handle handle, compat::polymorphic_allocator<char>* allocator);
 };
 
