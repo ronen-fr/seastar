@@ -249,7 +249,7 @@ seastar::socket_address::socket_address(const net::inet_address& a, uint16_t p)
 {}
 
 seastar::net::inet_address seastar::socket_address::addr() const {
-    switch (as_posix_sockaddr().sa_family) {
+    switch (family()) {
     case AF_INET:
         return net::inet_address(as_posix_sockaddr_in().sin_addr);
     case AF_INET6:
@@ -264,12 +264,18 @@ seastar::net::inet_address seastar::socket_address::addr() const {
 }
 
 bool seastar::socket_address::is_wildcard() const {
-    if (u.sa.sa_family == AF_INET) {
-        ipv4_addr addr(*this);
-        return addr.is_ip_unspecified() && addr.is_port_unspecified();
-    } else {
-        ipv6_addr addr(*this);
-        return addr.is_ip_unspecified() && addr.is_port_unspecified();
+    switch (family()) {
+    case AF_INET: {
+            ipv4_addr addr(*this);
+            return addr.is_ip_unspecified() && addr.is_port_unspecified();
+        }
+    default:
+    case AF_INET6: {
+            ipv6_addr addr(*this);
+            return addr.is_ip_unspecified() && addr.is_port_unspecified();
+        }
+    case AF_UNIX:
+        return length() <= sizeof(::sa_family_t);
     }
 }
 
@@ -293,6 +299,10 @@ std::ostream& seastar::net::operator<<(std::ostream& os, const inet_address::fam
 }
 
 std::ostream& seastar::operator<<(std::ostream& os, const socket_address& a) {
+    if (a.is_af_unix()) {
+        return os << printable_ud_addr(a);
+    }
+
     auto addr = a.addr();
     // CMH. maybe skip brackets for ipv4-mapped
     auto bracket = addr.in_family() == seastar::net::inet_address::family::INET6;
