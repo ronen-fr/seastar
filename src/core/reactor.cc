@@ -252,6 +252,9 @@ reactor::accept(pollable_fd_state& listenfd) {
     return readable_or_writeable(listenfd).then([this, &listenfd] () mutable {
         socket_address sa;
         socklen_t sl = sa.length();
+        if (listenfd.no_more_recv) {
+            return make_exception_future<std::tuple<pollable_fd, socket_address>>(std::system_error(std::error_code(ECONNABORTED,std::system_category())));
+        }
         auto maybe_fd = listenfd.fd.try_accept(sa, sl, SOCK_NONBLOCK | SOCK_CLOEXEC);
         if (!maybe_fd) {
             // We speculated that we will have an another connection, but got a false
